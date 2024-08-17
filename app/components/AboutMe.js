@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import styled from "@emotion/styled";
 import { logoUrls } from "../data/imgUrls";
 import { Section, SectionHeading, Paragraph } from "./shared";
@@ -25,40 +25,164 @@ const LogoGroup = styled.div`
   }
 `;
 
-const FeatureContainer = styled.div`
+const BentoGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+`;
+
+const BentoItem = styled.div`
+  perspective: 1000px;
+  height: 300px;
+  transition: transform 0.8s;
+  ${({ isFlipped }) =>
+    isFlipped &&
+    `
+    transform: scale(1.15);
+    z-index: 1;
+  `}
+`;
+
+const BentoInner = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+  ${({ isFlipped, flipDirection }) =>
+    isFlipped &&
+    `
+    transform: ${getFlipTransform(flipDirection)};
+  `}
+`;
+
+const BentoFace = styled.div`
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 2rem;
-  border: 1px solid #444;
-  border-radius: 8px;
-  padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease-in-out;
-  flex: 1 1 0; // Added this line
-  flex-basis: 200px; // Added this line
-
-  &:hover {
-    transform: translateY(-5px);
-  }
-
-  .feature-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-  }
-
-  .feature-title {
-    font-size: 1.5rem;
-    text-align: center;
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-  }
-
-  .feature-subtitle {
-    font-size: 1rem;
-    text-align: center;
-  }
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 1.5rem;
 `;
+
+const BentoFront = styled(BentoFace)``;
+
+const BentoBack = styled(BentoFace)`
+  transform: rotateY(180deg);
+  overflow: hidden;
+`;
+
+const FeatureIcon = styled.div`
+  font-size: 3rem;
+  margin-bottom: 1rem;
+`;
+
+const FeatureTitle = styled.h3`
+  font-size: 1.5rem;
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+`;
+
+const FeatureSubtitle = styled.p`
+  font-size: 1rem;
+  text-align: center;
+`;
+
+const SlideShow = styled.div`
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+`;
+
+const Slide = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  opacity: ${(props) => (props.active ? 1 : 0)};
+  transition: opacity 0.5s ease-in-out;
+`;
+
+function getFlipTransform(direction) {
+  switch (direction) {
+    case "left":
+      return "rotateY(-180deg)";
+    case "right":
+      return "rotateY(180deg)";
+    case "up":
+      return "rotateX(180deg)";
+    case "down":
+      return "rotateX(-180deg)";
+    default:
+      return "rotateY(180deg)";
+  }
+}
+
+const BentoItemComponent = ({ icon: Icon, title, subtitle, images }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [flipDirection, setFlipDirection] = useState("right");
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const handleFlip = () => {
+    const directions = ["left", "right", "up", "down"];
+    const randomDirection =
+      directions[Math.floor(Math.random() * directions.length)];
+    setFlipDirection(randomDirection);
+    setIsFlipped(!isFlipped);
+  };
+
+  useEffect(() => {
+    let slideInterval;
+    if (isFlipped) {
+      slideInterval = setInterval(() => {
+        setCurrentSlide((prevSlide) => (prevSlide + 1) % images.length);
+      }, 3000); // Change slide every 3 seconds
+    }
+    return () => clearInterval(slideInterval);
+  }, [isFlipped, images.length]);
+
+  return (
+    <BentoItem
+      isFlipped={isFlipped}
+      onMouseEnter={handleFlip}
+      onMouseLeave={handleFlip}
+    >
+      <BentoInner isFlipped={isFlipped} flipDirection={flipDirection}>
+        <BentoFront>
+          <FeatureIcon>
+            <Icon />
+          </FeatureIcon>
+          <FeatureTitle>{title}</FeatureTitle>
+          <FeatureSubtitle>{subtitle}</FeatureSubtitle>
+        </BentoFront>
+        <BentoBack>
+          <SlideShow>
+            {images.map((image, index) => (
+              <Slide
+                key={index}
+                src={image}
+                alt={`Slide ${index + 1}`}
+                active={index === currentSlide}
+              />
+            ))}
+          </SlideShow>
+        </BentoBack>
+      </BentoInner>
+    </BentoItem>
+  );
+};
 
 const AboutMe = React.forwardRef((props, ref) => {
   function getLogos() {
@@ -69,36 +193,39 @@ const AboutMe = React.forwardRef((props, ref) => {
 
   return (
     <AboutSection ref={ref}>
-      <div style={{ maxWidth: "700px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <FeatureContainer>
-            <FaLaptopCode className="feature-icon" />
-            <h3 className="feature-title">Software Dev</h3>
-            <p className="feature-subtitle">
-              Experienced in building web and mobile applications.
-            </p>
-          </FeatureContainer>
-          <FeatureContainer>
-            <FaShieldAlt className="feature-icon" />
-            <h3 className="feature-title">Cybersecurity Practitioner</h3>
-            <p className="feature-subtitle">
-              Skilled in penetration testing and security incident management.
-            </p>
-          </FeatureContainer>
-          <FeatureContainer>
-            <FaUserGraduate className="feature-icon" />
-            <h3 className="feature-title">Web dev</h3>
-            <p className="feature-subtitle">
-              Continuously expanding my skills and knowledge.
-            </p>
-          </FeatureContainer>
-        </div>
+      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <BentoGrid>
+          <BentoItemComponent
+            icon={FaLaptopCode}
+            title="Software Dev"
+            subtitle="Experienced in building web and mobile applications."
+            images={[
+              "/path/to/software-dev-image1.jpg",
+              "/path/to/software-dev-image2.jpg",
+              "/path/to/software-dev-image3.jpg",
+            ]}
+          />
+          <BentoItemComponent
+            icon={FaShieldAlt}
+            title="Cybersecurity Practitioner"
+            subtitle="Skilled in penetration testing and security incident management."
+            images={[
+              "/path/to/cybersecurity-image1.jpg",
+              "/path/to/cybersecurity-image2.jpg",
+              "/path/to/cybersecurity-image3.jpg",
+            ]}
+          />
+          <BentoItemComponent
+            icon={FaUserGraduate}
+            title="Web dev"
+            subtitle="Continuously expanding my skills and knowledge."
+            images={[
+              "/path/to/webdev-image1.jpg",
+              "/path/to/webdev-image2.jpg",
+              "/path/to/webdev-image3.jpg",
+            ]}
+          />
+        </BentoGrid>
         <SectionHeading>whoami</SectionHeading>
         <Paragraph>
           I'm a CyberSecurity Practitioner, software & web developer with a
